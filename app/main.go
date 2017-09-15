@@ -15,6 +15,11 @@ var db gorm.DB
 
 const datetime_format = "2006-01-02 15:04:05"
 
+var types = map[string]string{
+	"album": "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/explicit.json",
+	"song":  "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-songs/all/10/explicit.json",
+}
+
 // historiesテーブル定義
 type History struct {
 	gorm.Model
@@ -41,11 +46,11 @@ type Resource struct {
 // Result アルバム/ソングの情報
 type Result []struct {
 	ArtistName string `json:"artistName"`    // artist name
-	ArtistURL  string `json:"artistUrl"`     // artist page URL
-	ArtworkURL string `json:"artworkUrl100"` // jacket picture URL
+	ArtistUrl  string `json:"artistUrl"`     // artist page URL
+	ArtworkUrl string `json:"artworkUrl100"` // jacket picture URL
 	Copyright  string `json:"copyright"`     // copyright
 	Name       string `json:"name"`          // album/song name
-	URL        string `json:"url"`           // album/song URL
+	Url        string `json:"url"`           // album/song URL
 }
 
 // Lanking RSS Feedのアウトライン
@@ -57,62 +62,76 @@ type Lanking struct {
 	} `json:"feed"`
 }
 
+type Lankings map[string]Lanking
+type Histories map[string]History
+
 func main() {
-	res, err := http.Get("https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/explicit.json")
+	lankings := make(Lankings)
 
-	if err != nil {
-		fmt.Println(err)
-		return
+	for k, v := range types {
+		res, err := http.Get(v)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		defer res.Body.Close()
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		var lanking Lanking
+		if err := json.Unmarshal(body, &lanking); err != nil {
+			fmt.Println(err)
+			return
+		}
+		lankings[k] = lanking
 	}
-
-	defer res.Body.Close()
-	execute(res)
-}
-
-func execute(response *http.Response) {
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	var lanking Lanking
-	if err := json.Unmarshal(body, &lanking); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	apiUpdated := parseDatetime(lanking.Outline.Updated)
 
 	db := gormConnect()
 	defer db.Close()
 
-	history := History{}
-	db.Where("resource_type = ?", "album").Last(&history)
+	histories := make(Histories)
 
-	updated := parseDatetime(history.ApiUpdatedAt)
-
-	if apiUpdated == updated {
-		return
+	for k, _ := range types {
+		h := History{}
+		db.Where("resource_type = ?", k).Last(&h)
+		histories[k] = h
 	}
 
-	history = History{}
-	history.ApiUpdatedAt = apiUpdated
-	history.ResourceType = "album"
-	history.ApiUrl = lanking.Outline.ApiUrl
+	for k, _ := range types {
+		l := lankings[k]
+		h := histories[k]
 
-	db.Create(&history)
+		apiUpdated := parseDatetime(l.Outline.Updated)
+		updated := parseDatetime(h.ApiUpdatedAt)
 
-	for _, r := range lanking.Outline.Results {
-		db.Create(&Resource{
-			HistoryId:  history.Model.ID,
-			Name:       r.ArtistName,
-			Url:        r.URL,
-			ArtworkUrl: r.ArtworkURL,
-			ArtistName: r.ArtistName,
-			ArtistUrl:  r.ArtistURL,
-			Copyright:  r.Copyright,
-		})
+		if apiUpdated == updated {
+			continue
+		}
+
+		history := History{}
+		history.ApiUpdatedAt = apiUpdated
+		history.ResourceType = k
+		history.ApiUrl = l.Outline.ApiUrl
+
+		db.Create(&history)
+
+		for _, r := range l.Outline.Results {
+			db.Create(&Resource{
+				HistoryId:  history.Model.ID,
+				Name:       r.Name,
+				Url:        r.Url,
+				ArtworkUrl: r.ArtworkUrl,
+				ArtistName: r.ArtistName,
+				ArtistUrl:  r.ArtistUrl,
+				Copyright:  r.Copyright,
+			})
+		}
 	}
 }
 
