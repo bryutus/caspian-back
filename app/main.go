@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -68,29 +69,39 @@ type Histories map[string]History
 func main() {
 	lankings := make(Lankings)
 
+	var waitGroup sync.WaitGroup
+
 	for k, v := range types {
-		res, err := http.Get(v)
+		waitGroup.Add(1)
 
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		go func(resourceType, resource string) {
+			defer waitGroup.Done()
 
-		defer res.Body.Close()
+			res, err := http.Get(resource)
 
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
-		var lanking Lanking
-		if err := json.Unmarshal(body, &lanking); err != nil {
-			fmt.Println(err)
-			return
-		}
-		lankings[k] = lanking
+			defer res.Body.Close()
+
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			var lanking Lanking
+			if err := json.Unmarshal(body, &lanking); err != nil {
+				fmt.Println(err)
+				return
+			}
+			lankings[resourceType] = lanking
+		}(k, v)
 	}
+
+	waitGroup.Wait()
 
 	db := gormConnect()
 	defer db.Close()
