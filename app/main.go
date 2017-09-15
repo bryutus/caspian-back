@@ -114,11 +114,11 @@ func main() {
 			continue
 		}
 
-		history := History{}
-		history.ApiUpdatedAt = apiUpdated
-		history.ResourceType = resourceType
-		history.ApiUrl = l.Outline.ApiUrl
-
+		history := History{
+			ApiUpdatedAt: apiUpdated,
+			ResourceType: resourceType,
+			ApiUrl:       l.Outline.ApiUrl,
+		}
 		db.Create(&history)
 
 		for _, r := range l.Outline.Results {
