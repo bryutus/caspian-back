@@ -5,7 +5,38 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
+
+var db gorm.DB
+
+const datetime_format = "2006-01-02 15:04:05"
+
+// historiesテーブル定義
+type History struct {
+	gorm.Model
+	Id           int64 `gorm:"primary_key"`
+	ApiUpdatedAt string
+	ResourceType string
+	ApiUrl       string
+	Resources    []Resource
+}
+
+// resourcesテーブル定義
+type Resource struct {
+	gorm.Model
+	Id         int64 `gorm:"primary_key"`
+	HistoryId  uint
+	Name       string
+	Url        string
+	ArtworkUrl string
+	ArtistName string
+	ArtistUrl  string
+	Copyright  string
+}
 
 // Result アルバム/ソングの情報
 type Result []struct {
@@ -21,6 +52,7 @@ type Result []struct {
 type Lanking struct {
 	Outline struct {
 		Updated string `json:"updated"`
+		ApiUrl  string `json:"id"`
 		Results Result `json:"results"`
 	} `json:"feed"`
 }
@@ -50,9 +82,64 @@ func execute(response *http.Response) {
 		return
 	}
 
-	fmt.Println(lanking.Outline.Updated)
-	for _, r := range lanking.Outline.Results {
-		fmt.Printf("%s : %s : %s : %s : %s : %s\n",
-			r.ArtistName, r.ArtistURL, r.Name, r.URL, r.ArtworkURL, r.Copyright)
+	apiUpdated := parseDatetime(lanking.Outline.Updated)
+
+	db := gormConnect()
+	defer db.Close()
+
+	history := History{}
+	db.Where("resource_type = ?", "album").Last(&history)
+
+	updated := parseDatetime(history.ApiUpdatedAt)
+
+	if apiUpdated == updated {
+		return
 	}
+
+	history = History{}
+	history.ApiUpdatedAt = apiUpdated
+	history.ResourceType = "album"
+	history.ApiUrl = lanking.Outline.ApiUrl
+
+	db.Create(&history)
+
+	for _, r := range lanking.Outline.Results {
+		db.Create(&Resource{
+			HistoryId:  history.Model.ID,
+			Name:       r.ArtistName,
+			Url:        r.URL,
+			ArtworkUrl: r.ArtworkURL,
+			ArtistName: r.ArtistName,
+			ArtistUrl:  r.ArtistURL,
+			Copyright:  r.Copyright,
+		})
+	}
+}
+
+func parseDatetime(datetime string) string {
+	timestamp, err := time.Parse(time.RFC3339, datetime)
+
+	if err != nil {
+		fmt.Println(err)
+		return "err"
+	}
+
+	return timestamp.Format(datetime_format)
+}
+
+func gormConnect() *gorm.DB {
+	DBMS := "mysql"
+	USER := "root"
+	PASS := "root"
+	PROTOCOL := "tcp(db:3306)"
+	DBNAME := "app"
+	OPTION := "charset=utf8&parseTime=True"
+
+	CONNECT := USER + ":" + PASS + "@" + PROTOCOL + "/" + DBNAME + "?" + OPTION
+	db, err := gorm.Open(DBMS, CONNECT)
+
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
