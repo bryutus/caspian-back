@@ -7,15 +7,17 @@ import (
 	"net/http"
 )
 
+// Result アルバム/ソングの情報
 type Result []struct {
-	ArtistName string `json:"artistName"`
-	ArtistURL  string `json:"artistUrl"`
-	ArtworkURL string `json:"artworkUrl100"`
-	Copyright  string `json:"copyright"`
-	Name       string `json:"name"`
-	URL        string `json:"url"`
+	ArtistName string `json:"artistName"`    // artist name
+	ArtistURL  string `json:"artistUrl"`     // artist page URL
+	ArtworkURL string `json:"artworkUrl100"` // jacket picture URL
+	Copyright  string `json:"copyright"`     // copyright
+	Name       string `json:"name"`          // album/song name
+	URL        string `json:"url"`           // album/song URL
 }
 
+// Lanking RSS Feedのアウトライン
 type Lanking struct {
 	Outline struct {
 		Updated string `json:"updated"`
