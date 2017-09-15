@@ -103,9 +103,9 @@ func main() {
 		histories[k] = h
 	}
 
-	for k, _ := range types {
-		l := lankings[k]
-		h := histories[k]
+	for resourceType, _ := range types {
+		l := lankings[resourceType]
+		h := histories[resourceType]
 
 		apiUpdated := parseDatetime(l.Outline.Updated)
 		updated := parseDatetime(h.ApiUpdatedAt)
@@ -116,7 +116,7 @@ func main() {
 
 		history := History{}
 		history.ApiUpdatedAt = apiUpdated
-		history.ResourceType = k
+		history.ResourceType = resourceType
 		history.ApiUrl = l.Outline.ApiUrl
 
 		db.Create(&history)
