@@ -9,13 +9,25 @@ import (
 func GetAlbum() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		return c.String(http.StatusOK, "album limit"+limit)
+
+		j := map[string]string{
+			"resource": "album",
+			"limit":    limit,
+		}
+
+		return c.JSON(http.StatusOK, j)
 	}
 }
 
 func GetSong() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		return c.String(http.StatusOK, "song limit"+limit)
+
+		j := map[string]string{
+			"resource": "song",
+			"limit":    limit,
+		}
+
+		return c.JSON(http.StatusOK, j)
 	}
 }
