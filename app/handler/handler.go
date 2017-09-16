@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-func GetAlbum() echo.HandlerFunc {
+func GetAlbums() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
 
@@ -19,7 +19,7 @@ func GetAlbum() echo.HandlerFunc {
 	}
 }
 
-func GetSong() echo.HandlerFunc {
+func GetSongs() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
 
