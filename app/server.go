@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryutus/caspian-back/app/handler"
+	"github.com/bryutus/caspian-serverside/app/handler"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )

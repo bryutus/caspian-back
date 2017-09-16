@@ -6,9 +6,9 @@ ENV GOPATH $GOPATH:/go/src
 RUN apt-get update && \
     apt-get upgrade -y
 
-RUN go get github.com/labstack/echo && \
+RUN go get -u github.com/labstack/echo && \
     go get -u github.com/dgrijalva/jwt-go && \
-    go get github.com/jinzhu/gorm && \
-    go get github.com/go-sql-driver/mysql
+    go get -u github.com/jinzhu/gorm && \
+    go get -u github.com/go-sql-driver/mysql
 
 EXPOSE 1323

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bryutus/caspian-back/app/db"
-	"github.com/bryutus/caspian-back/app/models"
+	"github.com/bryutus/caspian-serverside/app/db"
+	"github.com/bryutus/caspian-serverside/app/models"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
