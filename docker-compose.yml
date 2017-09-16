@@ -1,10 +1,13 @@
 app:
-  image: golang:1.9
+  build: .
+  dockerfile: Dockerfile-Go
   tty: true
+  volumes:
+    - ./app:/go/src/github.com/bryutus/caspian-back
+  ports:
+    - 1323:1323
   links:
     - db
-  volumes:
-    - "./app:/go/src/github.com/bryutus/caspian-back"
 db:
   build: .
   dockerfile: Dockerfile-MySQL
