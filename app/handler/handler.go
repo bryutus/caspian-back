@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/labstack/echo"
 )
@@ -9,10 +11,8 @@ import (
 func GetAlbums() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-
-		j := map[string]string{
-			"resource": "album",
-			"limit":    limit,
+		if matched, _ := regexp.MatchString(`[0-9]`, limit); !matched {
+			return c.JSON(http.StatusOK, fmt.Sprintf("Invalid value %s", limit))
 		}
 
 		return c.JSON(http.StatusOK, j)
