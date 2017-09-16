@@ -8,40 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"github.com/bryutus/caspian-back/app/db"
+	"github.com/bryutus/caspian-back/app/models"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
-
-var db gorm.DB
 
 const datetime_format = "2006-01-02 15:04:05"
 
 var types = map[string]string{
 	"album": "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/explicit.json",
 	"song":  "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-songs/all/10/explicit.json",
-}
-
-// historiesテーブル定義
-type History struct {
-	gorm.Model
-	Id           int64 `gorm:"primary_key"`
-	ApiUpdatedAt string
-	ResourceType string
-	ApiUrl       string
-	Resources    []Resource
-}
-
-// resourcesテーブル定義
-type Resource struct {
-	gorm.Model
-	Id         int64 `gorm:"primary_key"`
-	HistoryId  uint
-	Name       string
-	Url        string
-	ArtworkUrl string
-	ArtistName string
-	ArtistUrl  string
-	Copyright  string
 }
 
 // Result アルバム/ソングの情報
@@ -64,7 +40,7 @@ type Lanking struct {
 }
 
 type Lankings map[string]Lanking
-type Histories map[string]History
+type Histories map[string]models.History
 
 func main() {
 	lankings := make(Lankings)
@@ -103,13 +79,13 @@ func main() {
 
 	waitGroup.Wait()
 
-	db := gormConnect()
+	db := db.Connect()
 	defer db.Close()
 
 	histories := make(Histories)
 
 	for k, _ := range types {
-		h := History{}
+		h := models.History{}
 		db.Where("resource_type = ?", k).Last(&h)
 		histories[k] = h
 	}
@@ -125,7 +101,7 @@ func main() {
 			continue
 		}
 
-		history := History{
+		history := models.History{
 			ApiUpdatedAt: apiUpdated,
 			ResourceType: resourceType,
 			ApiUrl:       l.Outline.ApiUrl,
@@ -133,7 +109,7 @@ func main() {
 		db.Create(&history)
 
 		for _, r := range l.Outline.Results {
-			db.Create(&Resource{
+			db.Create(&models.Resource{
 				HistoryId:  history.Model.ID,
 				Name:       r.Name,
 				Url:        r.Url,
@@ -155,21 +131,4 @@ func parseDatetime(datetime string) string {
 	}
 
 	return timestamp.Format(datetime_format)
-}
-
-func gormConnect() *gorm.DB {
-	DBMS := "mysql"
-	USER := "root"
-	PASS := "root"
-	PROTOCOL := "tcp(db:3306)"
-	DBNAME := "app"
-	OPTION := "charset=utf8&parseTime=True"
-
-	CONNECT := USER + ":" + PASS + "@" + PROTOCOL + "/" + DBNAME + "?" + OPTION
-	db, err := gorm.Open(DBMS, CONNECT)
-
-	if err != nil {
-		panic(err)
-	}
-	return db
 }
