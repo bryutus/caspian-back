@@ -3,7 +3,7 @@ app:
   dockerfile: Dockerfile-Go
   tty: true
   volumes:
-    - ./app:/go/src/github.com/bryutus/caspian-back
+    - ./app:/go/src/github.com/bryutus/caspian-back/app
   ports:
     - 1323:1323
   links:
