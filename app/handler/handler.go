@@ -10,6 +10,25 @@ import (
 	"github.com/labstack/echo"
 )
 
+type (
+	Resource struct {
+		Collection Collection `json:"collection"`
+	}
+	Collection struct {
+		Title   string `json:"title"`
+		Updated string `json:"updated"`
+		Items   []Item `json:"items"`
+	}
+	Item struct {
+		Name       string `json:"name"`
+		Url        string `json:"url"`
+		ArtworkUrl string `json:"artworkUrl"`
+		ArtistName string `json:"artistName"`
+		ArtistUrl  string `json:"artistUrl"`
+		Copyright  string `json:"copyright"`
+	}
+)
+
 func GetAlbums() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
@@ -26,11 +45,31 @@ func GetAlbums() echo.HandlerFunc {
 		}
 
 		r := []models.Resource{}
-		if db.Model(&h).Limit(limit).Related(&r).RecordNotFound() {
+		if db.Model(&h).Order("id").Limit(limit).Related(&r).RecordNotFound() {
 			return c.JSON(http.StatusOK, "not found")
 		}
 
-		return c.JSON(http.StatusOK, r)
+		var items []Item
+		for _, v := range r {
+			t := Item{}
+			t.Name = v.Name
+			t.Url = v.Url
+			t.ArtworkUrl = v.ArtworkUrl
+			t.ArtistName = v.ArtistName
+			t.ArtistUrl = v.ArtistUrl
+			t.Copyright = v.Copyright
+			items = append(items, t)
+		}
+
+		data := &Resource{
+			Collection{
+				Title:   h.ResourceType,
+				Updated: h.ApiUpdatedAt,
+				Items:   items,
+			},
+		}
+
+		return c.JSONPretty(http.StatusOK, data, "  ")
 	}
 }
 
