@@ -49,25 +49,7 @@ func GetAlbums() echo.HandlerFunc {
 			return c.JSON(http.StatusOK, "not found")
 		}
 
-		var items []Item
-		for _, v := range r {
-			t := Item{}
-			t.Name = v.Name
-			t.Url = v.Url
-			t.ArtworkUrl = v.ArtworkUrl
-			t.ArtistName = v.ArtistName
-			t.ArtistUrl = v.ArtistUrl
-			t.Copyright = v.Copyright
-			items = append(items, t)
-		}
-
-		data := &Resource{
-			Collection{
-				Title:   h.ResourceType,
-				Updated: h.ApiUpdatedAt,
-				Items:   items,
-			},
-		}
+		data := createResponseBody(&h, &r)
 
 		return c.JSONPretty(http.StatusOK, data, "  ")
 	}
@@ -92,4 +74,27 @@ func isNumeric(str string) (err error) {
 	}
 
 	return nil
+}
+
+func createResponseBody(h *models.History, r *[]models.Resource) (data *Resource) {
+	var items []Item
+
+	for _, v := range *r {
+		t := Item{}
+		t.Name = v.Name
+		t.Url = v.Url
+		t.ArtworkUrl = v.ArtworkUrl
+		t.ArtistName = v.ArtistName
+		t.ArtistUrl = v.ArtistUrl
+		t.Copyright = v.Copyright
+		items = append(items, t)
+	}
+
+	return &Resource{
+		Collection{
+			Title:   h.ResourceType,
+			Updated: h.ApiUpdatedAt,
+			Items:   items,
+		},
+	}
 }
