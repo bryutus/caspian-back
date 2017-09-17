@@ -58,13 +58,26 @@ func GetAlbums() echo.HandlerFunc {
 func GetSongs() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-
-		j := map[string]string{
-			"resource": "song",
-			"limit":    limit,
+		if err := isNumeric(limit); err != nil {
+			return c.JSON(http.StatusOK, "Invalid value")
 		}
 
-		return c.JSON(http.StatusOK, j)
+		db := db.Connect()
+		defer db.Close()
+
+		h := models.History{}
+		if db.Where("resource_type = ?", "song").Last(&h).RecordNotFound() {
+			return c.JSON(http.StatusOK, "not found")
+		}
+
+		r := []models.Resource{}
+		if db.Model(&h).Order("id").Limit(limit).Related(&r).RecordNotFound() {
+			return c.JSON(http.StatusOK, "not found")
+		}
+
+		data := createResponseBody(&h, &r)
+
+		return c.JSONPretty(http.StatusOK, data, "  ")
 	}
 }
 
