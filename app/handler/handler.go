@@ -26,7 +26,7 @@ func GetAlbums() echo.HandlerFunc {
 		}
 
 		r := []models.Resource{}
-		if db.Where("history_id = ?", h.ID).Limit(limit).Find(&r).RecordNotFound() {
+		if db.Model(&h).Limit(limit).Related(&r).RecordNotFound() {
 			return c.JSON(http.StatusOK, "not found")
 		}
 
