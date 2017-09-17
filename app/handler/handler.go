@@ -32,8 +32,8 @@ type (
 func GetAlbums() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		if matched, _ := regexp.MatchString(`[0-9]`, limit); !matched {
-			return c.JSON(http.StatusOK, fmt.Sprintf("Invalid value %s", limit))
+		if err := isNumeric(limit); err != nil {
+			return c.JSON(http.StatusOK, "Invalid value")
 		}
 
 		db := db.Connect()
@@ -84,4 +84,12 @@ func GetSongs() echo.HandlerFunc {
 
 		return c.JSON(http.StatusOK, j)
 	}
+}
+
+func isNumeric(str string) (err error) {
+	if matched, _ := regexp.MatchString(`[0-9]`, str); !matched {
+		return fmt.Errorf("Invalid value %s", str)
+	}
+
+	return nil
 }
