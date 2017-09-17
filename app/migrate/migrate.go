@@ -10,5 +10,5 @@ func main() {
 	defer db.Close()
 
 	db.DropTableIfExists(&models.History{}, &models.Resource{})
-	db.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&models.History{}, &models.Resource{})
+	db.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&models.History{}, &models.Resource{}).AddForeignKey("history_id", "histories(id)", "RESTRICT", "RESTRICT")
 }
