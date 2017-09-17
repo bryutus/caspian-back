@@ -20,13 +20,15 @@ func GetAlbums() echo.HandlerFunc {
 		db := db.Connect()
 		defer db.Close()
 
-		// 取得データ確認
 		h := models.History{}
-		db.Where("resource_type = ?", "album").Last(&h)
+		if db.Where("resource_type = ?", "album").Last(&h).RecordNotFound() {
+			return c.JSON(http.StatusOK, "not found")
+		}
 
-		// 取得データ確認
 		r := []models.Resource{}
-		db.Where("history_id = ?", h.ID).Limit(limit).Find(&r)
+		if db.Where("history_id = ?", h.ID).Limit(limit).Find(&r).RecordNotFound() {
+			return c.JSON(http.StatusOK, "not found")
+		}
 
 		return c.JSON(http.StatusOK, r)
 	}
