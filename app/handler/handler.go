@@ -32,8 +32,10 @@ type (
 func GetAlbums() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		if err := isNumeric(limit); err != nil {
-			return c.JSON(http.StatusOK, "Invalid value")
+		if !isEmpty(limit) {
+			if err := isNumeric(limit); err != nil {
+				return c.JSON(http.StatusOK, "Invalid value")
+			}
 		}
 
 		db := db.Connect()
@@ -58,8 +60,10 @@ func GetAlbums() echo.HandlerFunc {
 func GetSongs() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		if err := isNumeric(limit); err != nil {
-			return c.JSON(http.StatusOK, "Invalid value")
+		if !isEmpty(limit) {
+			if err := isNumeric(limit); err != nil {
+				return c.JSON(http.StatusOK, "Invalid value")
+			}
 		}
 
 		db := db.Connect()
@@ -79,6 +83,14 @@ func GetSongs() echo.HandlerFunc {
 
 		return c.JSONPretty(http.StatusOK, data, "  ")
 	}
+}
+
+func isEmpty(str string) bool {
+	if str == "" {
+		return true
+	}
+
+	return false
 }
 
 func isNumeric(str string) (err error) {
