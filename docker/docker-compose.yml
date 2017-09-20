@@ -1,18 +1,18 @@
 app:
-  build: .
+  build: ./go
   dockerfile: Dockerfile-Go
   tty: true
   volumes:
-    - ./app:/go/src/github.com/bryutus/caspian-serverside/app
+    - ../app:/go/src/github.com/bryutus/caspian-serverside/app
   ports:
     - 1323:1323
   links:
     - db
 db:
-  build: .
+  build: ./mysql
   dockerfile: Dockerfile-MySQL
   volumes:
-    - ./db/mysql_data:/var/lib/mysql
+    - ./mysql/data:/var/lib/mysql
   environment:
     - MYSQL_ROOT_PASSWORD=root
     - MYSQL_DATABASE=app
