@@ -1,6 +1,6 @@
 app:
   build: ./docker/go
-  dockerfile: Dockerfile-Go
+  container_name: goapi
   tty: true
   volumes:
     - ./app:/go/src/github.com/bryutus/caspian-serverside/app
@@ -8,9 +8,19 @@ app:
     - 1323:1323
   links:
     - db
+web:
+  build: ./docker/nginx
+  container_name: nginx
+  ports:
+    - 8080:8080
+  volumes:
+    - ./docker/nginx:/etc/nginx/conf.d:ro
+    - ./public:/www/app
+  links:
+    - app
 db:
   build: ./docker/mysql
-  dockerfile: Dockerfile-MySQL
+  container_name: mysql
   volumes:
     - ./docker/mysql/data:/var/lib/mysql
   environment:
