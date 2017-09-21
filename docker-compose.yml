@@ -9,6 +9,17 @@ app:
     - 1323:1323
   links:
     - db
+web:
+  build: ./docker/nginx
+  dockerfile: Dockerfile-Nginx
+  container_name: nginx
+  ports:
+    - 8080:8080
+  volumes:
+    - ./docker/nginx:/etc/nginx/conf.d:ro
+    - www:/www/app:ro
+  links:
+    - app
 db:
   build: ./docker/mysql
   dockerfile: Dockerfile-MySQL
