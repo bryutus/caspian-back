@@ -15,8 +15,8 @@ func main() {
 		AllowMethods: []string{echo.GET},
 	}))
 
-	e.GET("/albums", handler.GetAlbums())
-	e.GET("/songs", handler.GetSongs())
+	e.GET("/albums", handler.GetResources("album"))
+	e.GET("/songs", handler.GetResources("song"))
 
 	e.Start(conf.GetEchoPort())
 }

@@ -29,7 +29,7 @@ type (
 	}
 )
 
-func GetAlbums() echo.HandlerFunc {
+func GetResources(resource string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
 		if !isEmpty(limit) {
@@ -42,35 +42,7 @@ func GetAlbums() echo.HandlerFunc {
 		defer db.Close()
 
 		h := models.History{}
-		if db.Where("resource_type = ?", "album").Last(&h).RecordNotFound() {
-			return c.JSON(http.StatusOK, "not found")
-		}
-
-		r := []models.Resource{}
-		if db.Model(&h).Order("id").Limit(limit).Related(&r).RecordNotFound() {
-			return c.JSON(http.StatusOK, "not found")
-		}
-
-		data := createResponseBody(&h, &r)
-
-		return c.JSONPretty(http.StatusOK, data, "  ")
-	}
-}
-
-func GetSongs() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		limit := c.QueryParam("limit")
-		if !isEmpty(limit) {
-			if err := isNumeric(limit); err != nil {
-				return c.JSON(http.StatusOK, "Invalid value")
-			}
-		}
-
-		db := db.Connect()
-		defer db.Close()
-
-		h := models.History{}
-		if db.Where("resource_type = ?", "song").Last(&h).RecordNotFound() {
+		if db.Where("resource_type = ?", resource).Last(&h).RecordNotFound() {
 			return c.JSON(http.StatusOK, "not found")
 		}
 
