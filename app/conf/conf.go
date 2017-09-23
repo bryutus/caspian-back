@@ -1,10 +1,12 @@
 package conf
 
 import (
+	"fmt"
+
 	"github.com/BurntSushi/toml"
 )
 
-var confFile = "/go/src/github.com/bryutus/caspian-serverside/app/conf/caspian.toml"
+const confFile = "/go/src/github.com/bryutus/caspian-serverside/app/conf/caspian.toml"
 
 type Config struct {
 	Database DbConfig `toml:"database"`
@@ -20,7 +22,7 @@ type DbConfig struct {
 	ParseTime string `toml:"parseTime"`
 }
 
-func LoardConf(conf *Config) error {
+func loardConf(conf *Config) error {
 
 	_, err := toml.DecodeFile(confFile, &conf)
 	if err != nil {
@@ -28,4 +30,26 @@ func LoardConf(conf *Config) error {
 	}
 
 	return nil
+}
+
+func GetDbDriver() string {
+
+	var c Config
+	err := loardConf(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	return c.Database.Driver
+}
+
+func GetDbConnect() string {
+
+	var c Config
+	err := loardConf(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=%s", c.Database.User, c.Database.Pass, c.Database.Protocol, c.Database.Database, c.Database.Charset, c.Database.ParseTime)
 }
