@@ -8,12 +8,14 @@ import (
 
 const confFile = "/go/src/github.com/bryutus/caspian-serverside/app/conf/caspian.toml"
 
-type Config struct {
-	Database DbConfig   `toml:"database"`
-	Echo     EchoConfig `toml:"echo"`
+var c config
+
+type config struct {
+	Database dbConfig   `toml:"database"`
+	Echo     echoConfig `toml:"echo"`
 }
 
-type DbConfig struct {
+type dbConfig struct {
 	Driver    string `toml:"driver"`
 	User      string `toml:"user"`
 	Pass      string `toml:"pass"`
@@ -23,65 +25,44 @@ type DbConfig struct {
 	ParseTime string `toml:"parseTime"`
 }
 
-type EchoConfig struct {
-	Port         string        `toml:"port"`
-	AllowOrigins []SlaveOrigin `toml:"slave"`
+type echoConfig struct {
+	Port         string          `toml:"port"`
+	AllowOrigins []echoAllowHost `toml:"slave"`
 }
 
-type SlaveOrigin struct {
+type echoAllowHost struct {
 	Host string `toml:"host"`
 }
 
-func loardConf(conf *Config) error {
+func loardConf(conf *config) {
 
 	_, err := toml.DecodeFile(confFile, &conf)
 	if err != nil {
-		return err
+		panic(err)
 	}
-
-	return nil
 }
 
 func GetDbDriver() string {
 
-	var c Config
-	err := loardConf(&c)
-	if err != nil {
-		panic(err)
-	}
-
+	loardConf(&c)
 	return c.Database.Driver
 }
 
 func GetDbConnect() string {
 
-	var c Config
-	err := loardConf(&c)
-	if err != nil {
-		panic(err)
-	}
-
+	loardConf(&c)
 	return fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=%s", c.Database.User, c.Database.Pass, c.Database.Protocol, c.Database.Database, c.Database.Charset, c.Database.ParseTime)
 }
 
 func GetEchoPort() string {
 
-	var c Config
-	err := loardConf(&c)
-	if err != nil {
-		panic(err)
-	}
-
+	loardConf(&c)
 	return ":" + c.Echo.Port
 }
 
-func GetHosts() []string {
+func GetEchoAllowOrigins() []string {
 
-	var c Config
-	err := loardConf(&c)
-	if err != nil {
-		panic(err)
-	}
+	loardConf(&c)
 
 	hosts := []string{}
 	for _, v := range c.Echo.AllowOrigins {
