@@ -12,3 +12,12 @@ port = "1323"
 
 [[echo.slave]]
 host = "localhost"
+
+[apple]
+[[apple.slave]]
+resource = "album"
+url = "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/explicit.json"
+
+[[apple.slave]]
+resource = "song"
+url = "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-songs/all/10/explicit.json"

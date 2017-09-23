@@ -8,17 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bryutus/caspian-serverside/app/conf"
 	"github.com/bryutus/caspian-serverside/app/db"
 	"github.com/bryutus/caspian-serverside/app/models"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 const datetime_format = "2006-01-02 15:04:05"
-
-var types = map[string]string{
-	"album": "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/explicit.json",
-	"song":  "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-songs/all/10/explicit.json",
-}
 
 // Result アルバム/ソングの情報
 type Result []struct {
@@ -46,6 +42,8 @@ func main() {
 	lankings := make(Lankings)
 
 	var waitGroup sync.WaitGroup
+
+	types := conf.GetAppleApis()
 
 	for k, v := range types {
 		waitGroup.Add(1)

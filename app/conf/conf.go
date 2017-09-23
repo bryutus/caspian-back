@@ -11,8 +11,9 @@ const confFile = "/go/src/github.com/bryutus/caspian-serverside/app/conf/caspian
 var c config
 
 type config struct {
-	Database dbConfig   `toml:"database"`
-	Echo     echoConfig `toml:"echo"`
+	Database dbConfig    `toml:"database"`
+	Echo     echoConfig  `toml:"echo"`
+	Apple    appleConfig `toml:"apple"`
 }
 
 type dbConfig struct {
@@ -34,8 +35,16 @@ type echoAllowHost struct {
 	Host string `toml:"host"`
 }
 
-func loardConf(conf *config) {
+type appleConfig struct {
+	API []appleAPI `toml:"slave"`
+}
 
+type appleAPI struct {
+	Resource string `toml:"resource"`
+	URL      string `toml:"url"`
+}
+
+func loardConf(conf *config) {
 	_, err := toml.DecodeFile(confFile, &conf)
 	if err != nil {
 		panic(err)
@@ -70,4 +79,16 @@ func GetEchoAllowOrigins() []string {
 	}
 
 	return hosts
+}
+
+func GetAppleApis() map[string]string {
+
+	loardConf(&c)
+
+	apis := make(map[string]string)
+	for _, v := range c.Apple.API {
+		apis[v.Resource] = v.URL
+	}
+
+	return apis
 }
