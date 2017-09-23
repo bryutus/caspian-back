@@ -9,3 +9,6 @@ parseTime = "true"
 
 [echo]
 port = "1323"
+
+[[echo.slave]]
+host = "localhost"

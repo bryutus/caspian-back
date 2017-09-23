@@ -24,7 +24,12 @@ type DbConfig struct {
 }
 
 type EchoConfig struct {
-	Port string `toml:"port"`
+	Port         string        `toml:"port"`
+	AllowOrigins []SlaveOrigin `toml:"slave"`
+}
+
+type SlaveOrigin struct {
+	Host string `toml:"host"`
 }
 
 func loardConf(conf *Config) error {
@@ -60,6 +65,7 @@ func GetDbConnect() string {
 }
 
 func GetEchoPort() string {
+
 	var c Config
 	err := loardConf(&c)
 	if err != nil {
@@ -67,4 +73,20 @@ func GetEchoPort() string {
 	}
 
 	return ":" + c.Echo.Port
+}
+
+func GetHosts() []string {
+
+	var c Config
+	err := loardConf(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	hosts := []string{}
+	for _, v := range c.Echo.AllowOrigins {
+		hosts = append(hosts, v.Host)
+	}
+
+	return hosts
 }

@@ -11,7 +11,7 @@ func main() {
 	e := echo.New()
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"localhost"},
+		AllowOrigins: conf.GetHosts(),
 		AllowMethods: []string{echo.GET},
 	}))
 
