@@ -32,7 +32,7 @@ type (
 func GetResources(resource string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		limit := c.QueryParam("limit")
-		if !isEmpty(limit) {
+		if limit != "" {
 			if err := isNumeric(limit); err != nil {
 				return c.JSON(http.StatusOK, "Invalid value")
 			}
@@ -57,17 +57,9 @@ func GetResources(resource string) echo.HandlerFunc {
 	}
 }
 
-func isEmpty(str string) bool {
-	if str == "" {
-		return true
-	}
-
-	return false
-}
-
 func isNumeric(str string) (err error) {
 	if matched, _ := regexp.MatchString(`[0-9]`, str); !matched {
-		return fmt.Errorf("Invalid value %s", str)
+		return fmt.Errorf("limit: Invalid value `%s` is specified", str)
 	}
 
 	return nil
