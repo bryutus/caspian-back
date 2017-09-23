@@ -1,5 +1,5 @@
 # caspian-serverside
-caspianのバックエンドプロジェクト
+caspianのサーバーサイド
 
 GolangでAPIを開発
 
@@ -11,7 +11,7 @@ GolangでAPIを開発
 
 APIへのアクセスはNginxコンテナからGoのコンテナにフォワード
 
-## 開発環境構築
+## 環境構築
 ```bash
 git clone https://github.com/bryutus/caspian-serverside.git
 
@@ -20,7 +20,7 @@ docker-compose build
 docker-compose up -d
 ```
 
-## GoのAPIサーバ起動
+## GoのAPI起動
 
 ```bash
 # Goのコンテナに入る
