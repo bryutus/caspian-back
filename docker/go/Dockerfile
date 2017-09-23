@@ -8,6 +8,7 @@ RUN apt-get update && \
 
 RUN go get -u github.com/labstack/echo && \
     go get -u github.com/dgrijalva/jwt-go && \
+    go get -u github.com/BurntSushi/toml && \
     go get -u github.com/jinzhu/gorm && \
     go get -u github.com/go-sql-driver/mysql
 
