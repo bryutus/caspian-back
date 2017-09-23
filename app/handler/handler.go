@@ -42,16 +42,12 @@ func GetResources(resource string) echo.HandlerFunc {
 		defer db.Close()
 
 		h := models.History{}
-		if db.Where("resource_type = ?", resource).Last(&h).RecordNotFound() {
-			return c.JSON(http.StatusOK, "not found")
-		}
+		db.Where("resource_type = ?", resource).Last(&h)
 
 		r := []models.Resource{}
-		if db.Model(&h).Order("id").Limit(limit).Related(&r).RecordNotFound() {
-			return c.JSON(http.StatusOK, "not found")
-		}
+		db.Model(&h).Order("id").Limit(limit).Related(&r)
 
-		data := createResponseBody(&h, &r)
+		data := createResponseBody(resource, &h, &r)
 
 		return c.JSONPretty(http.StatusOK, data, "  ")
 	}
@@ -65,7 +61,7 @@ func isNumeric(str string) (err error) {
 	return nil
 }
 
-func createResponseBody(h *models.History, r *[]models.Resource) (data *Resource) {
+func createResponseBody(title string, h *models.History, r *[]models.Resource) (data *Resource) {
 	var items []Item
 
 	for _, v := range *r {
@@ -81,7 +77,7 @@ func createResponseBody(h *models.History, r *[]models.Resource) (data *Resource
 
 	return &Resource{
 		Collection{
-			Title:   h.ResourceType,
+			Title:   title,
 			Updated: h.ApiUpdatedAt,
 			Items:   items,
 		},
