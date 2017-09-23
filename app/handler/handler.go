@@ -34,7 +34,7 @@ func GetResources(resource string) echo.HandlerFunc {
 		limit := c.QueryParam("limit")
 		if limit != "" {
 			if err := isNumeric(limit); err != nil {
-				return c.JSON(http.StatusOK, "Invalid value")
+				limit = ""
 			}
 		}
 
