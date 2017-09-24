@@ -2,9 +2,13 @@ package handler
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 
+	"github.com/bryutus/caspian-serverside/app/conf"
 	"github.com/bryutus/caspian-serverside/app/db"
 	"github.com/bryutus/caspian-serverside/app/models"
 	"github.com/labstack/echo"
@@ -27,25 +31,58 @@ type (
 		ArtistUrl  string `json:"artistUrl"`
 		Copyright  string `json:"copyright"`
 	}
+
+	Err struct {
+		Info ErrInfo `json:"error"`
+	}
+	ErrInfo struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
 )
 
 func GetResources(resource string) echo.HandlerFunc {
 	return func(c echo.Context) error {
+
+		logfile, err := os.OpenFile(conf.GetLogFile(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			return c.JSONPretty(http.StatusOK, Err{ErrInfo{Code: 80, Message: "Failed to file operation"}}, "  ")
+		}
+		defer logfile.Close()
+
+		log.SetOutput(io.Writer(logfile))
+		log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 		limit := c.QueryParam("limit")
 		if limit != "" {
 			if err := isNumeric(limit); err != nil {
+				log.Printf("[INFO] %s", err.Error())
 				limit = ""
 			}
 		}
 
-		db := db.Connect()
+		db, err := db.Connect()
+		if err != nil {
+			log.Printf("[ERROR] %s", err.Error())
+			return c.JSONPretty(http.StatusOK, Err{ErrInfo{Code: 90, Message: "Failed to database operation"}}, "  ")
+		}
 		defer db.Close()
 
 		h := models.History{}
-		db.Where("resource_type = ?", resource).Last(&h)
+		if err := db.Where("resource_type = ?", resource).Last(&h).Error; err != nil {
+			if err.Error() != "record not found" {
+				log.Printf("[ERROR] Database: `%s`", err.Error())
+				return c.JSONPretty(http.StatusOK, Err{ErrInfo{Code: 91, Message: "Failed to database operation"}}, "  ")
+			}
+		}
 
 		r := []models.Resource{}
-		db.Model(&h).Order("id").Limit(limit).Related(&r)
+		if err := db.Model(&h).Order("id").Limit(limit).Related(&r).Error; err != nil {
+			if err.Error() != "record not found" {
+				log.Printf("[ERROR] Database: %s", err.Error())
+				return c.JSONPretty(http.StatusOK, Err{ErrInfo{Code: 92, Message: "Failed to database operation"}}, "  ")
+			}
+		}
 
 		data := createResponseBody(resource, &h, &r)
 

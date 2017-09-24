@@ -14,6 +14,7 @@ type config struct {
 	Database dbConfig    `toml:"database"`
 	Echo     echoConfig  `toml:"echo"`
 	Apple    appleConfig `toml:"apple"`
+	Log      logConfig   `toml:"log"`
 }
 
 type dbConfig struct {
@@ -44,10 +45,14 @@ type appleAPI struct {
 	URL      string `toml:"url"`
 }
 
+type logConfig struct {
+	File string `toml:"file"`
+}
+
 func loardConf(conf *config) {
 	_, err := toml.DecodeFile(confFile, &conf)
 	if err != nil {
-		panic(err)
+		panic("cannnot load config file:" + err.Error())
 	}
 }
 
@@ -91,4 +96,10 @@ func GetAppleApis() map[string]string {
 	}
 
 	return apis
+}
+
+func GetLogFile() string {
+
+	loardConf(&c)
+	return c.Log.File
 }

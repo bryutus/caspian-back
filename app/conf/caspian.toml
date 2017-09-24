@@ -21,3 +21,6 @@ url = "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-albums/all/10/expl
 [[apple.slave]]
 resource = "song"
 url = "https://rss.itunes.apple.com/api/v1/jp/apple-music/top-songs/all/10/explicit.json"
+
+[log]
+file = "/go/src/github.com/bryutus/caspian-serverside/app/log/app.log"
