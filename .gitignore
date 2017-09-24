@@ -14,3 +14,4 @@
 .glide/
 
 /docker/mysql/data
+/app/log/*.log
