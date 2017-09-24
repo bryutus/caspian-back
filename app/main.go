@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -39,6 +42,16 @@ type Lankings map[string]Lanking
 type Histories map[string]models.History
 
 func main() {
+	// ロギングの設定
+	logfile, err := os.OpenFile(conf.GetLogFile(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		panic("Failed to open log file: " + err.Error())
+	}
+	defer logfile.Close()
+
+	log.SetOutput(io.Writer(logfile))
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	lankings := make(Lankings)
 
 	var waitGroup sync.WaitGroup
