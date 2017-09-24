@@ -168,11 +168,11 @@ func getHistories(histories *HistoryMap, db *gorm.DB) error {
 	return nil
 }
 
-func createHistory(apiUpdated string, resource, apiUrl string, db *gorm.DB) (models.History, error) {
+func createHistory(apiUpdated string, resource, apiURL string, db *gorm.DB) (models.History, error) {
 	h := models.History{
 		ApiUpdatedAt: apiUpdated,
 		ResourceType: resource,
-		ApiUrl:       apiUrl,
+		ApiUrl:       apiURL,
 	}
 
 	err := db.Create(&h).Error
