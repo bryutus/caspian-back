@@ -107,8 +107,8 @@ func main() {
 		f := feeds[resource]
 		h := histories[resource]
 
-		apiUpdated := parseDatetime(f.Outline.Updated)
-		historyUpdated := parseDatetime(h.ApiUpdatedAt)
+		apiUpdated, _ := parseDatetime(f.Outline.Updated)
+		historyUpdated, _ := parseDatetime(h.ApiUpdatedAt)
 
 		if apiUpdated == historyUpdated {
 			continue
@@ -135,13 +135,16 @@ func main() {
 	}
 }
 
-func parseDatetime(datetime string) string {
-	timestamp, err := time.Parse(time.RFC3339, datetime)
+func parseDatetime(datetime string) (string, error) {
 
-	if err != nil {
-		fmt.Println(err)
-		return "err"
+	if datetime == "" {
+		return datetimeFormat, nil
 	}
 
-	return timestamp.Format(datetimeFormat)
+	timestamp, err := time.Parse(time.RFC3339, datetime)
+	if err != nil {
+		return datetime, err
+	}
+
+	return timestamp.Format(datetimeFormat), nil
 }
