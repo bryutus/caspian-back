@@ -14,11 +14,13 @@ import (
 	"github.com/bryutus/caspian-serverside/app/conf"
 	"github.com/bryutus/caspian-serverside/app/db"
 	"github.com/bryutus/caspian-serverside/app/models"
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 const datetimeFormat = "2006-01-02 15:04:05"
 
+var apiConfigs map[string]string
 var logfile os.File
 
 type Rsource []struct {
@@ -59,9 +61,9 @@ func main() {
 
 	var waitGroup sync.WaitGroup
 
-	types := conf.GetAppleApis()
+	apiConfigs = conf.GetAppleApis()
 
-	for k, v := range types {
+	for k, v := range apiConfigs {
 		waitGroup.Add(1)
 
 		go func(resource, apiUrl string) {
@@ -100,15 +102,14 @@ func main() {
 	}
 	defer db.Close()
 
+	// 履歴データ取得
 	histories := make(HistoryMap)
-
-	for k := range types {
-		h := models.History{}
-		db.Where("resource_type = ?", k).Last(&h)
-		histories[k] = h
+	if err := getHistories(&histories, db); err != nil {
+		log.Printf("[ERROR] %s", err.Error())
+		os.Exit(0)
 	}
 
-	for resource := range types {
+	for resource := range apiConfigs {
 		f := feeds[resource]
 		h := histories[resource]
 
@@ -152,4 +153,18 @@ func parseDatetime(datetime string) (string, error) {
 	}
 
 	return timestamp.Format(datetimeFormat), nil
+}
+
+func getHistories(histories *HistoryMap, db *gorm.DB) error {
+	for resource := range apiConfigs {
+
+		h := models.History{}
+		if err := db.Where("resource_type = ?", resource).Last(&h).Error; err != nil {
+			return err
+		}
+
+		(*histories)[resource] = h
+	}
+
+	return nil
 }
