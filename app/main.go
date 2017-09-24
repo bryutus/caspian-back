@@ -113,8 +113,8 @@ func main() {
 		f := feeds[resource]
 		h := histories[resource]
 
-		apiUpdated, _ := parseDatetime(f.Outline.Updated)
-		historyUpdated, _ := parseDatetime(h.ApiUpdatedAt)
+		apiUpdated := parseDatetime(f.Outline.Updated)
+		historyUpdated := parseDatetime(h.ApiUpdatedAt)
 
 		if apiUpdated == historyUpdated {
 			continue
@@ -141,18 +141,14 @@ func main() {
 	}
 }
 
-func parseDatetime(datetime string) (string, error) {
-
+func parseDatetime(datetime string) string {
 	if datetime == "" {
-		return datetimeFormat, nil
+		return datetimeFormat
 	}
 
-	timestamp, err := time.Parse(time.RFC3339, datetime)
-	if err != nil {
-		return datetime, err
-	}
+	timestamp, _ := time.Parse(time.RFC3339, datetime)
 
-	return timestamp.Format(datetimeFormat), nil
+	return timestamp.Format(datetimeFormat)
 }
 
 func getHistories(histories *HistoryMap, db *gorm.DB) error {
