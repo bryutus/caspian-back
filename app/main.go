@@ -2,14 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/bryutus/caspian-serverside/app/conf"
 	"github.com/bryutus/caspian-serverside/app/db"
@@ -57,43 +57,23 @@ func init() {
 func main() {
 	defer logfile.Close()
 
-	feeds := make(FeedMap)
-
-	var waitGroup sync.WaitGroup
-
 	apiConfigs = conf.GetAppleApis()
 
-	for k, v := range apiConfigs {
-		waitGroup.Add(1)
+	eg := errgroup.Group{}
 
-		go func(resource, apiUrl string) {
-			defer waitGroup.Done()
-
-			res, err := http.Get(apiUrl)
-
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			defer res.Body.Close()
-
-			body, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			var feed Feed
-			if err := json.Unmarshal(body, &feed); err != nil {
-				fmt.Println(err)
-				return
-			}
-			feeds[resource] = feed
-		}(k, v)
+	feeds := make(FeedMap)
+	for resource, apiURL := range apiConfigs {
+		resource := resource
+		apiURL := apiURL
+		eg.Go(func() error {
+			return fetchResources(&feeds, resource, apiURL)
+		})
 	}
 
-	waitGroup.Wait()
+	if err := eg.Wait(); err != nil {
+		log.Printf("[ERROR] %s", err.Error())
+		return
+	}
 
 	db, err := db.Connect()
 	if err != nil {
@@ -142,6 +122,29 @@ func main() {
 
 		tx.Commit()
 	}
+
+	return
+}
+
+func fetchResources(feeds *FeedMap, resource string, apiURL string) error {
+	res, err := http.Get(apiURL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	var feed Feed
+	if err := json.Unmarshal(body, &feed); err != nil {
+		return err
+	}
+	(*feeds)[resource] = feed
+
+	return nil
 }
 
 func parseDatetime(datetime string) string {
