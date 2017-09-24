@@ -49,6 +49,10 @@ type logConfig struct {
 	File string `toml:"file"`
 }
 
+func init() {
+	loardConf(&c)
+}
+
 func loardConf(conf *config) {
 	_, err := toml.DecodeFile(confFile, &conf)
 	if err != nil {
@@ -57,27 +61,18 @@ func loardConf(conf *config) {
 }
 
 func GetDbDriver() string {
-
-	loardConf(&c)
 	return c.Database.Driver
 }
 
 func GetDbConnect() string {
-
-	loardConf(&c)
 	return fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=%s", c.Database.User, c.Database.Pass, c.Database.Protocol, c.Database.Database, c.Database.Charset, c.Database.ParseTime)
 }
 
 func GetEchoPort() string {
-
-	loardConf(&c)
 	return ":" + c.Echo.Port
 }
 
 func GetEchoAllowOrigins() []string {
-
-	loardConf(&c)
-
 	hosts := []string{}
 	for _, v := range c.Echo.AllowOrigins {
 		hosts = append(hosts, v.Host)
@@ -87,9 +82,6 @@ func GetEchoAllowOrigins() []string {
 }
 
 func GetAppleApis() map[string]string {
-
-	loardConf(&c)
-
 	apis := make(map[string]string)
 	for _, v := range c.Apple.API {
 		apis[v.Resource] = v.URL
@@ -99,7 +91,5 @@ func GetAppleApis() map[string]string {
 }
 
 func GetLogFile() string {
-
-	loardConf(&c)
 	return c.Log.File
 }

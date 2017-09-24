@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	db := db.Connect()
+	db, _ := db.Connect()
 	defer db.Close()
 
 	db.DropTableIfExists(&models.Resource{}, &models.History{})

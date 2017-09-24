@@ -2,131 +2,201 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"sync"
+	"os"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/bryutus/caspian-serverside/app/conf"
 	"github.com/bryutus/caspian-serverside/app/db"
 	"github.com/bryutus/caspian-serverside/app/models"
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
-const datetime_format = "2006-01-02 15:04:05"
+const datetimeFormat = "2006-01-02 15:04:05"
 
-// Result アルバム/ソングの情報
-type Result []struct {
+var apiConfigs map[string]string
+var logfile os.File
+
+type Resource struct {
 	ArtistName string `json:"artistName"`    // artist name
-	ArtistUrl  string `json:"artistUrl"`     // artist page URL
-	ArtworkUrl string `json:"artworkUrl100"` // jacket picture URL
+	ArtistURL  string `json:"artistUrl"`     // artist page URL
+	ArtworkURL string `json:"artworkUrl100"` // jacket picture URL
 	Copyright  string `json:"copyright"`     // copyright
 	Name       string `json:"name"`          // album/song name
-	Url        string `json:"url"`           // album/song URL
+	URL        string `json:"url"`           // album/song URL
 }
 
-// Lanking RSS Feedのアウトライン
-type Lanking struct {
+type Feed struct {
 	Outline struct {
-		Updated string `json:"updated"`
-		ApiUrl  string `json:"id"`
-		Results Result `json:"results"`
+		Updated   string     `json:"updated"`
+		APIURL    string     `json:"id"`
+		Resources []Resource `json:"results"`
 	} `json:"feed"`
 }
 
-type Lankings map[string]Lanking
-type Histories map[string]models.History
+type FeedMap map[string]Feed
+type HistoryMap map[string]models.History
+
+func init() {
+	// ロギングの設定
+	logfile, err := os.OpenFile(conf.GetLogFile(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		panic("Failed to open log file: " + err.Error())
+	}
+
+	log.SetOutput(io.Writer(logfile))
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
 
 func main() {
-	lankings := make(Lankings)
+	defer logfile.Close()
 
-	var waitGroup sync.WaitGroup
+	apiConfigs = conf.GetAppleApis()
 
-	types := conf.GetAppleApis()
+	eg := errgroup.Group{}
 
-	for k, v := range types {
-		waitGroup.Add(1)
-
-		go func(resourceType, resource string) {
-			defer waitGroup.Done()
-
-			res, err := http.Get(resource)
-
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			defer res.Body.Close()
-
-			body, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			var lanking Lanking
-			if err := json.Unmarshal(body, &lanking); err != nil {
-				fmt.Println(err)
-				return
-			}
-			lankings[resourceType] = lanking
-		}(k, v)
+	feeds := make(FeedMap)
+	for resource, apiURL := range apiConfigs {
+		resource := resource
+		apiURL := apiURL
+		eg.Go(func() error {
+			return fetchResources(&feeds, resource, apiURL)
+		})
 	}
 
-	waitGroup.Wait()
+	if err := eg.Wait(); err != nil {
+		log.Printf("[ERROR] %s", err.Error())
+		return
+	}
 
-	db := db.Connect()
+	db, err := db.Connect()
+	if err != nil {
+		log.Printf("[ERROR] %s", err.Error())
+		return
+	}
 	defer db.Close()
 
-	histories := make(Histories)
-
-	for k, _ := range types {
-		h := models.History{}
-		db.Where("resource_type = ?", k).Last(&h)
-		histories[k] = h
+	histories := make(HistoryMap)
+	if err := getHistories(&histories, db); err != nil {
+		if err.Error() != "record not found" {
+			log.Printf("[ERROR] %s", err.Error())
+			return
+		}
 	}
 
-	for resourceType, _ := range types {
-		l := lankings[resourceType]
-		h := histories[resourceType]
+	for resource := range apiConfigs {
+		f := feeds[resource]
+		h := histories[resource]
 
-		apiUpdated := parseDatetime(l.Outline.Updated)
-		updated := parseDatetime(h.ApiUpdatedAt)
+		apiUpdated := parseDatetime(f.Outline.Updated)
+		historyUpdated := parseDatetime(h.ApiUpdatedAt)
 
-		if apiUpdated == updated {
+		// APIから取得したupdatedが前回取得時と同じであれば、
+		// APIの更新がないと判断して登録は行わない
+		if apiUpdated == historyUpdated {
 			continue
 		}
 
-		history := models.History{
-			ApiUpdatedAt: apiUpdated,
-			ResourceType: resourceType,
-			ApiUrl:       l.Outline.ApiUrl,
-		}
-		db.Create(&history)
+		tx := db.Begin()
 
-		for _, r := range l.Outline.Results {
-			db.Create(&models.Resource{
-				HistoryId:  history.Model.ID,
-				Name:       r.Name,
-				Url:        r.Url,
-				ArtworkUrl: r.ArtworkUrl,
-				ArtistName: r.ArtistName,
-				ArtistUrl:  r.ArtistUrl,
-				Copyright:  r.Copyright,
-			})
+		history, err := createHistory(apiUpdated, resource, f.Outline.APIURL, tx)
+		if err != nil {
+			log.Printf("[ERROR] %s", err.Error())
+			tx.Rollback()
+			continue
 		}
+
+		for _, resource := range f.Outline.Resources {
+			if err := createResource(history.Model.ID, &resource, tx); err != nil {
+				log.Printf("[ERROR] %s", err.Error())
+				tx.Rollback()
+				continue
+			}
+		}
+
+		tx.Commit()
 	}
+
+	return
+}
+
+func fetchResources(feeds *FeedMap, resource string, apiURL string) error {
+	res, err := http.Get(apiURL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	var feed Feed
+	if err := json.Unmarshal(body, &feed); err != nil {
+		return err
+	}
+	(*feeds)[resource] = feed
+
+	return nil
 }
 
 func parseDatetime(datetime string) string {
-	timestamp, err := time.Parse(time.RFC3339, datetime)
-
-	if err != nil {
-		fmt.Println(err)
-		return "err"
+	if datetime == "" {
+		return datetimeFormat
 	}
 
-	return timestamp.Format(datetime_format)
+	timestamp, _ := time.Parse(time.RFC3339, datetime)
+
+	return timestamp.Format(datetimeFormat)
+}
+
+func getHistories(histories *HistoryMap, db *gorm.DB) error {
+	for resource := range apiConfigs {
+
+		h := models.History{}
+		if err := db.Where("resource_type = ?", resource).Last(&h).Error; err != nil {
+			return err
+		}
+
+		(*histories)[resource] = h
+	}
+
+	return nil
+}
+
+func createHistory(apiUpdated string, resource, apiURL string, db *gorm.DB) (models.History, error) {
+	h := models.History{
+		ApiUpdatedAt: apiUpdated,
+		ResourceType: resource,
+		ApiUrl:       apiURL,
+	}
+
+	err := db.Create(&h).Error
+
+	return h, err
+}
+
+func createResource(id uint, resource *Resource, db *gorm.DB) error {
+	r := models.Resource{
+		HistoryId:  id,
+		Name:       resource.Name,
+		Url:        resource.URL,
+		ArtworkUrl: resource.ArtworkURL,
+		ArtistName: resource.ArtistName,
+		ArtistUrl:  resource.ArtistURL,
+		Copyright:  resource.Copyright,
+	}
+
+	if err := db.Create(&r).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
