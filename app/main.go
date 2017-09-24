@@ -17,29 +17,27 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
-const datetime_format = "2006-01-02 15:04:05"
+const datetimeFormat = "2006-01-02 15:04:05"
 
-// Result アルバム/ソングの情報
-type Result []struct {
+type Rsource []struct {
 	ArtistName string `json:"artistName"`    // artist name
-	ArtistUrl  string `json:"artistUrl"`     // artist page URL
-	ArtworkUrl string `json:"artworkUrl100"` // jacket picture URL
+	ArtistURL  string `json:"artistUrl"`     // artist page URL
+	ArtworkURL string `json:"artworkUrl100"` // jacket picture URL
 	Copyright  string `json:"copyright"`     // copyright
 	Name       string `json:"name"`          // album/song name
-	Url        string `json:"url"`           // album/song URL
+	URL        string `json:"url"`           // album/song URL
 }
 
-// Lanking RSS Feedのアウトライン
-type Lanking struct {
+type Feed struct {
 	Outline struct {
-		Updated string `json:"updated"`
-		ApiUrl  string `json:"id"`
-		Results Result `json:"results"`
+		Updated  string  `json:"updated"`
+		APIURL   string  `json:"id"`
+		Rsources Rsource `json:"results"`
 	} `json:"feed"`
 }
 
-type Lankings map[string]Lanking
-type Histories map[string]models.History
+type FeedMap map[string]Feed
+type HistoryMap map[string]models.History
 
 func main() {
 	// ロギングの設定
@@ -52,7 +50,7 @@ func main() {
 	log.SetOutput(io.Writer(logfile))
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
-	lankings := make(Lankings)
+	feeds := make(FeedMap)
 
 	var waitGroup sync.WaitGroup
 
@@ -61,10 +59,10 @@ func main() {
 	for k, v := range types {
 		waitGroup.Add(1)
 
-		go func(resourceType, resource string) {
+		go func(resource, apiUrl string) {
 			defer waitGroup.Done()
 
-			res, err := http.Get(resource)
+			res, err := http.Get(apiUrl)
 
 			if err != nil {
 				fmt.Println(err)
@@ -79,12 +77,12 @@ func main() {
 				return
 			}
 
-			var lanking Lanking
-			if err := json.Unmarshal(body, &lanking); err != nil {
+			var feed Feed
+			if err := json.Unmarshal(body, &feed); err != nil {
 				fmt.Println(err)
 				return
 			}
-			lankings[resourceType] = lanking
+			feeds[resource] = feed
 		}(k, v)
 	}
 
@@ -97,7 +95,7 @@ func main() {
 	}
 	defer db.Close()
 
-	histories := make(Histories)
+	histories := make(HistoryMap)
 
 	for k, _ := range types {
 		h := models.History{}
@@ -105,32 +103,32 @@ func main() {
 		histories[k] = h
 	}
 
-	for resourceType, _ := range types {
-		l := lankings[resourceType]
-		h := histories[resourceType]
+	for resource, _ := range types {
+		f := feeds[resource]
+		h := histories[resource]
 
-		apiUpdated := parseDatetime(l.Outline.Updated)
-		updated := parseDatetime(h.ApiUpdatedAt)
+		apiUpdated := parseDatetime(f.Outline.Updated)
+		historyUpdated := parseDatetime(h.ApiUpdatedAt)
 
-		if apiUpdated == updated {
+		if apiUpdated == historyUpdated {
 			continue
 		}
 
 		history := models.History{
 			ApiUpdatedAt: apiUpdated,
-			ResourceType: resourceType,
-			ApiUrl:       l.Outline.ApiUrl,
+			ResourceType: resource,
+			ApiUrl:       f.Outline.APIURL,
 		}
 		db.Create(&history)
 
-		for _, r := range l.Outline.Results {
+		for _, r := range f.Outline.Rsources {
 			db.Create(&models.Resource{
 				HistoryId:  history.Model.ID,
 				Name:       r.Name,
-				Url:        r.Url,
-				ArtworkUrl: r.ArtworkUrl,
+				Url:        r.URL,
+				ArtworkUrl: r.ArtworkURL,
 				ArtistName: r.ArtistName,
-				ArtistUrl:  r.ArtistUrl,
+				ArtistUrl:  r.ArtistURL,
 				Copyright:  r.Copyright,
 			})
 		}
@@ -145,5 +143,5 @@ func parseDatetime(datetime string) string {
 		return "err"
 	}
 
-	return timestamp.Format(datetime_format)
+	return timestamp.Format(datetimeFormat)
 }
