@@ -44,7 +44,6 @@ type FeedMap map[string]Feed
 type HistoryMap map[string]models.History
 
 func init() {
-	// ロギングの設定
 	logfile, err := os.OpenFile(conf.GetLogFile(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		panic("Failed to open log file: " + err.Error())
