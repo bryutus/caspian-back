@@ -90,7 +90,11 @@ func main() {
 
 	waitGroup.Wait()
 
-	db := db.Connect()
+	db, err := db.Connect()
+	if err != nil {
+		log.Printf("[ERROR] %s", err.Error())
+		os.Exit(0)
+	}
 	defer db.Close()
 
 	histories := make(Histories)
