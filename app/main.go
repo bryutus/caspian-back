@@ -23,7 +23,7 @@ const datetimeFormat = "2006-01-02 15:04:05"
 var apiConfigs map[string]string
 var logfile os.File
 
-type Rsource []struct {
+type Resource struct {
 	ArtistName string `json:"artistName"`    // artist name
 	ArtistURL  string `json:"artistUrl"`     // artist page URL
 	ArtworkURL string `json:"artworkUrl100"` // jacket picture URL
@@ -34,9 +34,9 @@ type Rsource []struct {
 
 type Feed struct {
 	Outline struct {
-		Updated  string  `json:"updated"`
-		APIURL   string  `json:"id"`
-		Rsources Rsource `json:"results"`
+		Updated   string     `json:"updated"`
+		APIURL    string     `json:"id"`
+		Resources []Resource `json:"results"`
 	} `json:"feed"`
 }
 
@@ -105,8 +105,10 @@ func main() {
 	// 履歴データ取得
 	histories := make(HistoryMap)
 	if err := getHistories(&histories, db); err != nil {
-		log.Printf("[ERROR] %s", err.Error())
-		os.Exit(0)
+		if err.Error() != "record not found" {
+			log.Printf("[ERROR] %s", err.Error())
+			os.Exit(0)
+		}
 	}
 
 	for resource := range apiConfigs {
@@ -116,28 +118,30 @@ func main() {
 		apiUpdated := parseDatetime(f.Outline.Updated)
 		historyUpdated := parseDatetime(h.ApiUpdatedAt)
 
+		// APIから取得したupdatedが前回取得時と同じであれば、
+		// APIの更新がないと判断して登録は行わない
 		if apiUpdated == historyUpdated {
 			continue
 		}
 
-		history := models.History{
-			ApiUpdatedAt: apiUpdated,
-			ResourceType: resource,
-			ApiUrl:       f.Outline.APIURL,
-		}
-		db.Create(&history)
+		tx := db.Begin()
 
-		for _, r := range f.Outline.Rsources {
-			db.Create(&models.Resource{
-				HistoryId:  history.Model.ID,
-				Name:       r.Name,
-				Url:        r.URL,
-				ArtworkUrl: r.ArtworkURL,
-				ArtistName: r.ArtistName,
-				ArtistUrl:  r.ArtistURL,
-				Copyright:  r.Copyright,
-			})
+		history, err := createHistory(apiUpdated, resource, f.Outline.APIURL, tx)
+		if err != nil {
+			log.Printf("[ERROR] %s", err.Error())
+			tx.Rollback()
+			continue
 		}
+
+		for _, resource := range f.Outline.Resources {
+			if err := createResource(history.Model.ID, &resource, tx); err != nil {
+				log.Printf("[ERROR] %s", err.Error())
+				tx.Rollback()
+				continue
+			}
+		}
+
+		tx.Commit()
 	}
 }
 
@@ -160,6 +164,36 @@ func getHistories(histories *HistoryMap, db *gorm.DB) error {
 		}
 
 		(*histories)[resource] = h
+	}
+
+	return nil
+}
+
+func createHistory(apiUpdated string, resource, apiUrl string, db *gorm.DB) (models.History, error) {
+	h := models.History{
+		ApiUpdatedAt: apiUpdated,
+		ResourceType: resource,
+		ApiUrl:       apiUrl,
+	}
+
+	err := db.Create(&h).Error
+
+	return h, err
+}
+
+func createResource(id uint, resource *Resource, db *gorm.DB) error {
+	r := models.Resource{
+		HistoryId:  id,
+		Name:       resource.Name,
+		Url:        resource.URL,
+		ArtworkUrl: resource.ArtworkURL,
+		ArtistName: resource.ArtistName,
+		ArtistUrl:  resource.ArtistURL,
+		Copyright:  resource.Copyright,
+	}
+
+	if err := db.Create(&r).Error; err != nil {
+		return err
 	}
 
 	return nil
