@@ -25,10 +25,10 @@ type (
 	}
 	Item struct {
 		Name       string `json:"name"`
-		Url        string `json:"url"`
-		ArtworkUrl string `json:"artworkUrl"`
+		URL        string `json:"url"`
+		ArtworkURL string `json:"artworkUrl"`
 		ArtistName string `json:"artistName"`
-		ArtistUrl  string `json:"artistUrl"`
+		ArtistURL  string `json:"artistUrl"`
 		Copyright  string `json:"copyright"`
 	}
 
@@ -102,14 +102,14 @@ func createResponseBody(title string, h *models.History, r *[]models.Resource) (
 	var items []Item
 
 	for _, v := range *r {
-		t := Item{}
-		t.Name = v.Name
-		t.Url = v.Url
-		t.ArtworkUrl = v.ArtworkUrl
-		t.ArtistName = v.ArtistName
-		t.ArtistUrl = v.ArtistUrl
-		t.Copyright = v.Copyright
-		items = append(items, t)
+		item := Item{}
+		item.Name = v.Name
+		item.URL = v.Url
+		item.ArtworkURL = v.ArtworkUrl
+		item.ArtistName = v.ArtistName
+		item.ArtistURL = v.ArtistUrl
+		item.Copyright = v.Copyright
+		items = append(items, item)
 	}
 
 	return &Resource{
