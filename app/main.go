@@ -19,6 +19,8 @@ import (
 
 const datetimeFormat = "2006-01-02 15:04:05"
 
+var logfile os.File
+
 type Rsource []struct {
 	ArtistName string `json:"artistName"`    // artist name
 	ArtistURL  string `json:"artistUrl"`     // artist page URL
@@ -39,16 +41,19 @@ type Feed struct {
 type FeedMap map[string]Feed
 type HistoryMap map[string]models.History
 
-func main() {
+func init() {
 	// ロギングの設定
 	logfile, err := os.OpenFile(conf.GetLogFile(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		panic("Failed to open log file: " + err.Error())
 	}
-	defer logfile.Close()
 
 	log.SetOutput(io.Writer(logfile))
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
+func main() {
+	defer logfile.Close()
 
 	feeds := make(FeedMap)
 
