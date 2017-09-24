@@ -98,16 +98,15 @@ func main() {
 	db, err := db.Connect()
 	if err != nil {
 		log.Printf("[ERROR] %s", err.Error())
-		os.Exit(0)
+		return
 	}
 	defer db.Close()
 
-	// 履歴データ取得
 	histories := make(HistoryMap)
 	if err := getHistories(&histories, db); err != nil {
 		if err.Error() != "record not found" {
 			log.Printf("[ERROR] %s", err.Error())
-			os.Exit(0)
+			return
 		}
 	}
 
