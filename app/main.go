@@ -97,13 +97,13 @@ func main() {
 
 	histories := make(HistoryMap)
 
-	for k, _ := range types {
+	for k := range types {
 		h := models.History{}
 		db.Where("resource_type = ?", k).Last(&h)
 		histories[k] = h
 	}
 
-	for resource, _ := range types {
+	for resource := range types {
 		f := feeds[resource]
 		h := histories[resource]
 
