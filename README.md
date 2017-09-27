@@ -30,7 +30,7 @@ docker-compose exec app /bin/bash
 go run /go/src/github.com/bryutus/caspian-serverside/app/migrate/migrate.go
 
 # 外部APIよりデータ取得
-go run /go/src/github.com/bryutus/caspian-serverside/app/main.go
+go run /go/src/github.com/bryutus/caspian-serverside/app/batch/fetch.go
 
 # APIサーバ起動
 go run /go/src/github.com/bryutus/caspian-serverside/app/server.go
