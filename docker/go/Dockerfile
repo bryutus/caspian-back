@@ -4,7 +4,9 @@ FROM golang:1.9
 ENV GOPATH $GOPATH:/go/src
 
 RUN apt-get update && \
-    apt-get upgrade -y
+    apt-get upgrade -y && \
+    apt-get install -y cron && \
+    apt-get install -y vim
 
 RUN go get -u github.com/labstack/echo && \
     go get -u github.com/dgrijalva/jwt-go && \
