@@ -3,6 +3,7 @@ app:
   container_name: goapi
   tty: true
   volumes:
+    - ./docker/go/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro
     - ./app:/go/src/github.com/bryutus/caspian-serverside/app
   ports:
     - 1323:1323
