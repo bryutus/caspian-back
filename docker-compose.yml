@@ -3,8 +3,11 @@ app:
   container_name: goapi
   tty: true
   volumes:
+    - /etc/localtime:/etc/localtime:ro
     - ./docker/go/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf:ro
     - ./app:/go/src/github.com/bryutus/caspian-serverside/app
+  environment:
+    - TZ=Asia/Tokyo
   ports:
     - 1323:1323
   links:
@@ -15,16 +18,21 @@ web:
   ports:
     - 8080:8080
   volumes:
+    - /etc/localtime:/etc/localtime:ro
     - ./docker/nginx:/etc/nginx/conf.d:ro
     - ./public:/www/app
+  environment:
+    - TZ=Asia/Tokyo
   links:
     - app
 db:
   build: ./docker/mysql
   container_name: mysql
   volumes:
+    - /etc/localtime:/etc/localtime:ro
     - ./docker/mysql/data:/var/lib/mysql
   environment:
     - MYSQL_ROOT_PASSWORD=root
     - MYSQL_DATABASE=app
+    - TZ=Asia/Tokyo
   command: mysqld --sql_mode="" --character-set-server=utf8 --collation-server=utf8_general_ci
